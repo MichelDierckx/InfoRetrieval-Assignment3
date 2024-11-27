@@ -40,12 +40,13 @@ class VectorStore:
                 data_storage_version="stable",
             )
             self.created = True
-        lance.write_dataset(
-            data,
-            self.path,
-            mode="append",
-            data_storage_version="stable",
-        )
+        else:
+            lance.write_dataset(
+                data,
+                self.path,
+                mode="append",
+                data_storage_version="stable",
+            )
 
 
 def _extract_id_from_filename(filename: str) -> int:
