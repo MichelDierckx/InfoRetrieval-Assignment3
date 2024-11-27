@@ -16,7 +16,7 @@ def setup_logging():
 
     # Configure the root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.DEBUG)
+    root_logger.setLevel(logging.WARNING)
     root_logger.addHandler(console_handler)
 
 
@@ -25,4 +25,6 @@ def get_logger(module_name: str) -> logging.Logger:
     Get a logger for the given module name.
     Each logger is prefixed with the module's name for clarity.
     """
-    return logging.getLogger(module_name)
+    logger = logging.getLogger(module_name)
+    logger.setLevel(logging.DEBUG)
+    return logger
