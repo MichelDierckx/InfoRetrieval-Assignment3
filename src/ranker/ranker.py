@@ -90,6 +90,5 @@ def _index_documents(documents_dir: str, work_dir: str):
         df = pd.DataFrame(embeddings)
         df.columns = df.columns.map(str)
         df["id"] = document_ids
-        print(df)
         vector_store.write(df)
     vector_store.cleanup()
