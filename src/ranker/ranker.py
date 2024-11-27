@@ -4,6 +4,7 @@ from datetime import timedelta
 import lance
 import pandas as pd
 from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
 
 from src.ranker.config import Config
 from src.utils.logger_setup import get_logger
@@ -64,12 +65,14 @@ def _index_documents(documents_dir: str, work_dir: str):
 
     # Encode documents in batch
     batch_size = 10_000
-    for i in range(0, len(text_files), batch_size):
+    for i in tqdm(range(0, len(text_files), batch_size), desc="Generating embeddings", unit=f"{batch_size} documents"):
         documents = []
-        for text_file in text_files:
-            with open(text_file, "r", encoding='utf-8') as f:
+        for text_file in text_files[i:i + batch_size]:
+            full_path = os.path.join(documents_dir, text_file)
+            with open(full_path, "r", encoding='utf-8') as f:
                 documents.append(f.read())
         embeddings = model.encode(documents, batch_size=32, show_progress_bar=True, convert_to_numpy=True,
                                   precision="float32", normalize_embeddings=True)
         df = pd.DataFrame(embeddings)
         vector_store.write(df)
+    vector_store.cleanup()

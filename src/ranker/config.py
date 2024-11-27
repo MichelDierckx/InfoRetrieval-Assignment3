@@ -141,7 +141,7 @@ class Config:
     def _log_parameters(self) -> None:
         """Log all chosen parameters."""
         for key, value in self._namespace.items():
-            logger.debug(f"  {key}: {value}")
+            logger.debug(f"{key}: {value}")
 
     def __getattr__(self, option):
         """
