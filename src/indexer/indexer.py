@@ -45,7 +45,7 @@ def _create_index(embeddings_dir: str, work_dir: str, index_filename: str):
 def _create_bruteforce_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
     # retrieve embeddings size
     embeddings_size = embeddings_store.get_embeddings_size()
-    # create brute-force index (with ids)
+    # create brute-force index (with ids) and using default distance metric (inner product)
     index = faiss.IndexIDMap(faiss.IndexFlatIP(embeddings_size))
     logger.info("Creating an exhaustive search index...")
     # add document embeddings to index in batches
