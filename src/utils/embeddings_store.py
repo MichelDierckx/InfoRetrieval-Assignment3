@@ -39,11 +39,12 @@ class EmbeddingsStore:
                 data_storage_version="stable",
             )
 
-    def sample(self, num_rows: int) -> pd.DataFrame:
+    def sample(self, num_rows: int):
         ds = lance.dataset(self.path)
         df = ds.sample(num_rows).to_pandas()
         df.drop(columns="id", inplace=True)
-        return df
+        samples = df.to_numpy()
+        return samples
 
     def nr_embeddings(self):
         ds = lance.dataset(self.path)
@@ -52,3 +53,12 @@ class EmbeddingsStore:
     def get_embeddings_size(self):
         ds = lance.dataset(self.path)
         return len(ds.schema) - 1
+
+    def get_batches(self, batch_size: int):
+        ds = lance.dataset(self.path)
+        for batch in ds.to_batches(batch_size=batch_size):
+            df = batch.to_pandas()
+            ids = df["id"].to_numpy()
+            df.drop(columns="id", inplace=True)
+            embeddings = df.to_numpy()
+            yield ids, embeddings
