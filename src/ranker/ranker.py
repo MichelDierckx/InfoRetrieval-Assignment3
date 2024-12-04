@@ -92,9 +92,12 @@ def _query(index: faiss.Index, query_embeddings: npt.NDArray[np.float32]) -> Tup
 
     match index_type:
         case "IndexIDMap":
+            # brute force search
             D, I = index.search(query_embeddings, nr_neighbours)
         case "IndexIVFFlat":
+            # number of clusters to visit
             index.nprobe = 10
+            # search clusters
             D, I = index.search(query_embeddings, nr_neighbours)
         case _:
             raise ValueError(f"Unsupported index type '{index_type}'")
