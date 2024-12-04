@@ -1,7 +1,7 @@
 from typing import Union, List
 
-from src.evaluator.config import Config
-from src.evaluator.evaluator import run
+from src.indexer.config import Config
+from src.indexer.indexer import run
 from src.utils.logger_setup import setup_logging
 
 

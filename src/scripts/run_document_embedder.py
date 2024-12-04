@@ -1,7 +1,7 @@
 from typing import Union, List
 
-from src.evaluator.config import Config
-from src.evaluator.evaluator import run
+from src.document_embedder.config import Config
+from src.document_embedder.embedder import run
 from src.utils.logger_setup import setup_logging
 
 

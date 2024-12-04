@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 class Config:
     def __init__(self):
         self._parser = configargparse.ArgParser(
-            description="Ranker: Index, rank and query documents using SBERT",
+            description="Ranker: Convert queries to embeddings using SBERT and query a given index.",
             default_config_files=["config.ini"],
             args_for_setting_config_path=["-c", "--config"],
             formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
@@ -46,7 +46,7 @@ class Config:
 
         # Parse the arguments
         self._namespace = vars(self._parser.parse_args(args_str))
-        self._validate_directory_path("documents", [".txt"])
+        self._validate_directory_path("index")
         self._validate_file_path("queries", [".csv", ".tsv"])
         self._validate_directory_path("work_dir")
         self._log_parameters()
@@ -56,16 +56,6 @@ class Config:
         Define the command-line and config file arguments.
         """
         # IO arguments
-        self._parser.add_argument(
-            "--documents",
-            required=True,
-            help="Directory containing the documents (textfiles) to be indexed.",
-            type=str,
-            action='store',
-            dest="documents",
-            metavar="<path>",
-        )
-
         self._parser.add_argument(
             "--queries",
             required=True,
@@ -79,6 +69,18 @@ class Config:
         )
 
         self._parser.add_argument(
+            "--index",
+            required=True,
+            help=(
+                "File containing a FAISS index."
+            ),
+            type=str,
+            action='store',
+            dest="index",
+            metavar="<path>",
+        )
+
+        self._parser.add_argument(
             "--work_dir",
             required=True,
             help="Working directory, used to write temporary files and output files.",
@@ -86,6 +88,15 @@ class Config:
             action='store',
             dest="work_dir",
             metavar="<path>",
+        )
+
+        self._parser.add_argument(
+            "--rankings",
+            required=True,
+            help="Filename of the rankings to be created (in CSV format).",
+            type=str,
+            action='store',
+            dest="rankings",
         )
 
     def _validate_directory_path(self, param: str, required_extensions: Optional[list] = None) -> None:

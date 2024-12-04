@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 class Config:
     def __init__(self):
         self._parser = configargparse.ArgParser(
-            description="Evaluator: Compute Mean Precision at K and Mean Recall at K for K = 1,3,5,10.",
+            description="Indexer: Create an index for given embeddings using FAISS.",
             default_config_files=["config.ini"],
             args_for_setting_config_path=["-c", "--config"],
             formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
@@ -46,8 +46,7 @@ class Config:
 
         # Parse the arguments
         self._namespace = vars(self._parser.parse_args(args_str))
-        self._validate_file_path("ranking", [".csv", ".tsv"])
-        self._validate_file_path("reference", [".csv", ".tsv"])
+        self._validate_directory_path("embeddings")
         self._validate_directory_path("work_dir")
         self._log_parameters()
 
@@ -57,32 +56,19 @@ class Config:
         """
         # IO arguments
         self._parser.add_argument(
-            "--ranking",
+            "--embeddings",
             required=True,
-            help=(
-                "File containing the ranking to evaluate. Supports .csv and .tsv"
-            ),
+            help="Directory containing the embeddings (lance dataset) to be indexed.",
             type=str,
             action='store',
-            dest="ranking",
-            metavar="<path>",
-        )
-        self._parser.add_argument(
-            "--reference",
-            required=True,
-            help=(
-                "File containing the reference ranking used for evaluation. Supports .csv and .tsv"
-            ),
-            type=str,
-            action='store',
-            dest="reference",
+            dest="embeddings",
             metavar="<path>",
         )
 
         self._parser.add_argument(
             "--work_dir",
             required=True,
-            help="Working directory, used to write output files.",
+            help="Working directory, used to write temporary files and output files.",
             type=str,
             action='store',
             dest="work_dir",
@@ -90,30 +76,17 @@ class Config:
         )
 
         self._parser.add_argument(
-            "--eval_filename",
+            "--index_filename",
             required=True,
-            help="The filename for the generated output.",
+            help="Filename of the FAISS index to be created.",
             type=str,
             action='store',
-            dest="eval_filename",
+            dest="index_filename",
         )
 
-    def _validate_directory_path(self, param: str) -> None:
+    def _validate_directory_path(self, param: str, required_extensions: Optional[list] = None) -> None:
         """
-        Validate that a directory path exists.
-
-        Parameters:
-        ----------
-        param : str
-            The name of the parameter to validate.
-        """
-        path = self.get(param)
-        if not os.path.isdir(path):  # Check if path is a valid directory
-            raise NotADirectoryError(f"--{param}: Path '{path}' is not a valid directory.")
-
-    def _validate_file_path(self, param: str, required_extensions: Optional[list] = None) -> None:
-        """
-        Validate that a file path exists and optionally check if it has one of the required extensions.
+        Validate that a directory path exists and optionally check if it has one of the required extensions.
 
         Parameters:
         ----------
@@ -121,18 +94,22 @@ class Config:
             The name of the parameter to validate.
 
         required_extensions : Optional[list], optional
-            A list of valid extensions to check the file against. If provided, ensures that the file ends with one of them.
+            A list of file extensions to validate against. If provided, checks that at least one file
+            in the directory matches one of the extensions.
         """
         path = self.get(param)
-        if not os.path.isfile(path):  # Check if the path is a valid file
-            raise FileNotFoundError(f"--{param}: Path '{path}' is not a valid file.")
+        if not os.path.isdir(path):  # Check if path is a valid directory
+            raise NotADirectoryError(f"--{param}: Path '{path}' is not a valid directory.")
 
         if required_extensions:
-            if not any(path.endswith(ext) for ext in required_extensions):
+            # Check if any file in the directory matches the required extensions
+            files_with_valid_extension = [
+                file for file in os.listdir(path) if any(file.endswith(ext) for ext in required_extensions)
+            ]
+            if not files_with_valid_extension:
                 valid_extensions = ', '.join(required_extensions)
                 raise ValueError(
-                    f"--{param}: Path '{path}' does not end with one of the following extensions: {valid_extensions}"
-                )
+                    f"--{param}: No files with extensions {valid_extensions} found in the directory '{path}'.")
 
     def _log_parameters(self) -> None:
         """Log all chosen parameters."""
