@@ -38,3 +38,17 @@ class EmbeddingsStore:
                 mode="append",
                 data_storage_version="stable",
             )
+
+    def sample(self, num_rows: int) -> pd.DataFrame:
+        ds = lance.dataset(self.path)
+        df = ds.sample(num_rows).to_pandas()
+        df.drop(columns="id", inplace=True)
+        return df
+
+    def nr_embeddings(self):
+        ds = lance.dataset(self.path)
+        return ds.count_rows()
+
+    def get_embeddings_size(self):
+        ds = lance.dataset(self.path)
+        return len(ds.schema) - 1
