@@ -16,13 +16,25 @@ pip install -r requirements.txt
 
 ### Running the program
 
-To index, query and rank documents use:
+To generate embeddings for documents use:
+
+```bash
+python3 -m src.scripts.run_document_embedder -c /path/to/config.ini
+```
+
+To generate an index for document embeddings use:
+
+```bash
+python3 -m src.scripts.run_indexer -c /path/to/config.ini
+```
+
+To rank documents given an index and queries use:
 
 ```bash
 python3 -m src.scripts.run_ranker -c /path/to/config.ini
 ```
 
-To evaluate rankings:
+To evaluate generated rankings using a reference ranking use:
 
 ```bash
 python3 -m src.scripts.run_evaluator -c /path/to/config.ini
