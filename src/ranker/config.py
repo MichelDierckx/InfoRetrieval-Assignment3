@@ -46,7 +46,7 @@ class Config:
 
         # Parse the arguments
         self._namespace = vars(self._parser.parse_args(args_str))
-        self._validate_directory_path("index")
+        self._validate_file_path("index", [".index"])
         self._validate_file_path("queries", [".csv", ".tsv"])
         self._validate_directory_path("work_dir")
         self._log_parameters()

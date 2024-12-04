@@ -33,7 +33,7 @@ def _embed_documents(documents_dir: str, work_dir: str, embeddings_dir: str):
     # Load a pretrained Sentence Transformer model
     model_name = "all-MiniLM-L6-v2"
     model = SentenceTransformer(model_name)
-    logger.debug(
+    logger.info(
         f"Loaded model '{model_name}' (max sequence length = {model.max_seq_length}, embedding dimension = {model.get_sentence_embedding_dimension()})")
 
     # List documents
