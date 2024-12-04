@@ -10,6 +10,9 @@ from src.utils.logger_setup import get_logger
 
 logger = get_logger(__name__)
 
+# the number of documents processed per batch
+BATCH_SIZE = 10_000
+
 
 def run(config: Config):
     _embed_documents(documents_dir=config.documents, work_dir=config.work_dir, embeddings_dir=config.embeddings_dir)
@@ -38,25 +41,32 @@ def _embed_documents(documents_dir: str, work_dir: str, embeddings_dir: str):
                   f.endswith('.txt') and os.path.isfile(os.path.join(documents_dir, f))]
     logger.info(f"Found {len(text_files)} documents.")
 
-    vector_store_path = os.path.join(work_dir, embeddings_dir)
-    # Clear lance dataset if exists
-    vector_store = EmbeddingsStore(vector_store_path)
-    vector_store.cleanup()
+    # Create embeddings store instance to save embeddings
+    embeddings_store = os.path.join(work_dir, embeddings_dir)
+    embeddings_store = EmbeddingsStore(embeddings_store)
+    # Clear out embeddings store
+    embeddings_store.cleanup()
 
-    # Encode documents in batch
-    batch_size = 10_000
-    for i in tqdm(range(0, len(text_files), batch_size), desc="Generating embeddings", unit=f"{batch_size} documents"):
+    # Read and encode documents in batch
+    nr_batches = -(len(text_files) // -BATCH_SIZE)
+    for i in tqdm(range(0, len(text_files), BATCH_SIZE), desc="Generating embeddings", unit=f"{BATCH_SIZE} documents",
+                  total=nr_batches):
+        # read documents and collect document text and document ids
         documents = []
         document_ids = []
-        for text_file in text_files[i:i + batch_size]:
+        for text_file in text_files[i:i + BATCH_SIZE]:
             document_ids.append(_extract_id_from_filename(text_file))
             full_path = os.path.join(documents_dir, text_file)
             with open(full_path, "r", encoding='utf-8') as f:
                 documents.append(f.read())
-        embeddings = model.encode(documents, batch_size=32, show_progress_bar=True, convert_to_numpy=True,
+        # generate embeddings for documents
+        embeddings = model.encode(documents, batch_size=32, show_progress_bar=False, convert_to_numpy=True,
                                   precision="float32", normalize_embeddings=True)
+        # store document ids and document embeddings in vect
         df = pd.DataFrame(embeddings)
         df.columns = df.columns.map(str)
         df["id"] = document_ids
-        vector_store.write(df)
-    vector_store.cleanup()
+        embeddings_store.write(df)
+    logger.info(f"Created vector store at '{embeddings_store.path}'.")
+    # remove old backup versions to reduce size on disk (lance feature)
+    embeddings_store.cleanup()

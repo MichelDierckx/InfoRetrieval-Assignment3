@@ -1,3 +1,4 @@
+import math
 import os
 import time
 
@@ -10,6 +11,7 @@ from src.utils.logger_setup import get_logger
 
 logger = get_logger(__name__)
 
+# the number of embeddings added to the index per batch
 BATCH_SIZE = 10_000
 
 
@@ -55,8 +57,8 @@ def _create_bruteforce_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
 def _create_ivf_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
     # retrieve embeddings size
     embeddings_size = embeddings_store.get_embeddings_size()
-    # number of clusters
-    nlist = 16 * 2 ** 10
+    # number of clusters (https://arxiv.org/pdf/2401.08281, https://github.com/facebookresearch/faiss/issues/112)
+    nlist = math.ceil(4 * math.sqrt(embeddings_size))
     # distance metric (equal to cosine similarity if embeddings are normalized)
     metric = faiss.METRIC_INNER_PRODUCT
     # create IVF index (with ids)
@@ -66,7 +68,7 @@ def _create_ivf_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
     logger.info(f"Creating an IVF index with {nlist} clusters.")
     # count how many embeddings need to be indexed
     nr_embeddings = embeddings_store.nr_embeddings()
-    # calculate an appropriate sample size
+    # calculate an appropriate sample size (https://github.com/facebookresearch/faiss/wiki/FAQ)
     sample_size = min(50 * nlist, nr_embeddings)
     # retrieve samples from embeddings storage
     samples = embeddings_store.sample(sample_size)
@@ -77,7 +79,8 @@ def _create_ivf_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
     train_duration = time.time() - train_time_start
     logger.info(f"Finished training IVF index in {train_duration} seconds.")
     # add document embeddings to index in batches
+    nr_batches = -(nr_embeddings // -BATCH_SIZE)
     for ids, embeddings in tqdm(embeddings_store.get_batches(BATCH_SIZE), desc="Adding embeddings to index",
-                                unit=f"{BATCH_SIZE} embeddings"):
+                                unit=f"{BATCH_SIZE} embeddings", total=nr_batches):
         index.add_with_ids(embeddings, ids)
     return index

@@ -3,10 +3,6 @@ from datetime import timedelta
 import lance
 import pandas as pd
 
-from src.utils.logger_setup import get_logger
-
-logger = get_logger(__name__)
-
 
 class EmbeddingsStore:
     def __init__(self, path):
@@ -23,7 +19,6 @@ class EmbeddingsStore:
 
     def write(self, data: pd.DataFrame):
         if not self.created:
-            logger.debug(f"Creating lance dataset at '{self.path}'.")
             lance.write_dataset(
                 data,
                 self.path,
