@@ -13,7 +13,7 @@ class Config:
     def __init__(self):
         self._parser = configargparse.ArgParser(
             description="Document embedder: Generate embeddings for documents using SBERT",
-            default_config_files=["config.ini"],
+            default_config_files=["config_embedder.ini"],
             args_for_setting_config_path=["-c", "--config"],
             formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
         )
@@ -73,6 +73,15 @@ class Config:
             action='store',
             dest="work_dir",
             metavar="<path>",
+        )
+
+        self._parser.add_argument(
+            "--embeddings_dir",
+            required=True,
+            help="Embeddings directory, this directory will be created and will contain the generated embeddings.",
+            type=str,
+            action='store',
+            dest="embeddings_dir",
         )
 
     def _validate_directory_path(self, param: str, required_extensions: Optional[list] = None) -> None:

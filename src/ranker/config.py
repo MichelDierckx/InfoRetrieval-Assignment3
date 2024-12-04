@@ -13,7 +13,7 @@ class Config:
     def __init__(self):
         self._parser = configargparse.ArgParser(
             description="Ranker: Convert queries to embeddings using SBERT and query a given index.",
-            default_config_files=["config.ini"],
+            default_config_files=["config_ranker.ini"],
             args_for_setting_config_path=["-c", "--config"],
             formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
         )

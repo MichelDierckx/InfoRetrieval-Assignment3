@@ -13,7 +13,7 @@ class Config:
     def __init__(self):
         self._parser = configargparse.ArgParser(
             description="Evaluator: Compute Mean Precision at K and Mean Recall at K for K = 1,3,5,10.",
-            default_config_files=["config.ini"],
+            default_config_files=["config_evaluator.ini"],
             args_for_setting_config_path=["-c", "--config"],
             formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
         )

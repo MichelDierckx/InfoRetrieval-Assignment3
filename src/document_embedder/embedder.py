@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 
 def run(config: Config):
-    _embed_documents(documents_dir=config.documents, work_dir=config.work_dir)
+    _embed_documents(documents_dir=config.documents, work_dir=config.work_dir, embeddings_dir=config.embeddings_dir)
 
 
 def _extract_id_from_filename(filename: str) -> int:
@@ -26,7 +26,7 @@ def _extract_id_from_filename(filename: str) -> int:
     return int(id_str)
 
 
-def _embed_documents(documents_dir: str, work_dir: str):
+def _embed_documents(documents_dir: str, work_dir: str, embeddings_dir: str):
     # Load a pretrained Sentence Transformer model
     model_name = "all-MiniLM-L6-v2"
     model = SentenceTransformer(model_name)
@@ -38,9 +38,10 @@ def _embed_documents(documents_dir: str, work_dir: str):
                   f.endswith('.txt') and os.path.isfile(os.path.join(documents_dir, f))]
     logger.info(f"Found {len(text_files)} documents.")
 
-    vector_store_path = os.path.join(work_dir, "document_embeddings")
+    vector_store_path = os.path.join(work_dir, embeddings_dir)
     # Clear lance dataset if exists
     vector_store = EmbeddingsStore(vector_store_path)
+    vector_store.cleanup()
 
     # Encode documents in batch
     batch_size = 10_000

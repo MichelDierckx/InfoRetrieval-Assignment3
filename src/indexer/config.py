@@ -13,7 +13,7 @@ class Config:
     def __init__(self):
         self._parser = configargparse.ArgParser(
             description="Indexer: Create an index for given embeddings using FAISS.",
-            default_config_files=["config.ini"],
+            default_config_files=["config_indexer.ini"],
             args_for_setting_config_path=["-c", "--config"],
             formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
         )

@@ -11,7 +11,6 @@ logger = get_logger(__name__)
 class EmbeddingsStore:
     def __init__(self, path):
         self.path = path
-        self.cleanup()
         self.created = False
 
     def cleanup(self):
