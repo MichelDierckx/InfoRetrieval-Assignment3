@@ -11,7 +11,9 @@ logger = get_logger(__name__)
 
 
 def run(config: Config):
+    # compute mean recall at k and mean precision at k
     evaluation_results = _compute_recall_and_precision(ranking=config.ranking, gt=config.gt, k_values=config.k)
+    # write computed evaluation results to disk
     _write_results(evaluation_results=evaluation_results, work_dir=config.work_dir, eval_filename=config.eval_filename)
 
 
