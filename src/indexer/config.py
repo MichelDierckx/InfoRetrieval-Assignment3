@@ -48,6 +48,10 @@ class Config:
         self._namespace = vars(self._parser.parse_args(args_str))
         self._validate_directory_path("embeddings")
         self._validate_directory_path("work_dir")
+        if self.get("nlist") is not None:
+            self._validate_positive_int("nlist", True)
+            if self.get("index_type") != "IVF":
+                raise RuntimeError("nlist parameter can only be specified for IVF index.")
         self._log_parameters()
 
     def _define_arguments(self) -> None:
@@ -84,6 +88,21 @@ class Config:
             dest="index_filename",
         )
 
+        self._parser.add_argument(
+            "--index_type",
+            type=str,
+            choices=["IVF", "Exhaustive"],
+            help="The type of index to be created. If not specified, an appropriate index is chosen based on the number of embeddings.",
+            dest="index_type",
+        )
+
+        self._parser.add_argument(
+            "--nlist",
+            type=int,
+            help="Can only be specified when index type is IVF. Number of lists to be created. If not specified the number of lists will be 4 * sqrt(nr_embeddings)",
+            dest="nlist",
+        )
+
     def _validate_directory_path(self, param: str, required_extensions: Optional[list] = None) -> None:
         """
         Validate that a directory path exists and optionally check if it has one of the required extensions.
@@ -110,6 +129,13 @@ class Config:
                 valid_extensions = ', '.join(required_extensions)
                 raise ValueError(
                     f"--{param}: No files with extensions {valid_extensions} found in the directory '{path}'.")
+
+    def _validate_positive_int(self, param: str, strict: bool = False) -> None:
+        value = self.get(param)
+        int_value = int(value)
+        if (strict and int_value <= 0) or (not strict and int_value < 0):
+            comparison = "greater than 0" if strict else "0 or greater"
+            raise ValueError(f"--{param}: {value} is not a positive integer ({comparison}).")
 
     def _log_parameters(self) -> None:
         """Log all chosen parameters."""

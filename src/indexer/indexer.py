@@ -1,6 +1,7 @@
 import math
 import os
 import time
+from typing import Optional
 
 import faiss
 from tqdm import tqdm
@@ -16,10 +17,11 @@ BATCH_SIZE = 10_000
 
 
 def run(config: Config):
-    _create_index(embeddings_dir=config.embeddings, work_dir=config.work_dir, index_filename=config.index_filename)
+    _index(embeddings_dir=config.embeddings, work_dir=config.work_dir, index_filename=config.index_filename,
+           index_type=config.index_type, nlist=config.nlist)
 
 
-def _create_index(embeddings_dir: str, work_dir: str, index_filename: str):
+def _index(embeddings_dir: str, work_dir: str, index_filename: str, index_type: Optional[str], nlist: Optional[int]):
     # create embeddings store instance to access document embeddings
     embeddings_store = EmbeddingsStore(embeddings_dir)
     embeddings_store.created = True
@@ -28,12 +30,18 @@ def _create_index(embeddings_dir: str, work_dir: str, index_filename: str):
     nr_embeddings = embeddings_store.nr_embeddings()
     logger.info(f"Found {nr_embeddings} embeddings at '{embeddings_dir}'.")
 
-    if nr_embeddings <= 10 ** 4:
-        index = _create_bruteforce_index(embeddings_store)
-    elif nr_embeddings <= 10 ** 6:
-        index = _create_ivf_index(embeddings_store)
-    else:
-        raise ValueError(f'Cannot create index for {nr_embeddings} embeddings')
+    match index_type:
+        case "Exhaustive":
+            index = _create_bruteforce_index(embeddings_store=embeddings_store)
+        case "IVF":
+            index = _create_ivf_index(embeddings_store=embeddings_store, nlist=nlist)
+        case _:
+            if nr_embeddings <= 10 ** 4:
+                index = _create_bruteforce_index(embeddings_store=embeddings_store)
+            elif nr_embeddings <= 10 ** 6:
+                index = _create_ivf_index(embeddings_store=embeddings_store, nlist=nlist)
+            else:
+                raise ValueError(f'Cannot create index for {nr_embeddings} embeddings')
 
     # write index to file
     index_filename = index_filename + '.index'
@@ -54,11 +62,11 @@ def _create_bruteforce_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
     return index
 
 
-def _create_ivf_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
+def _create_ivf_index(embeddings_store: EmbeddingsStore, nlist: Optional[str]) -> faiss.Index:
     # retrieve embeddings size
     embeddings_size = embeddings_store.get_embeddings_size()
     # number of clusters (https://arxiv.org/pdf/2401.08281, https://github.com/facebookresearch/faiss/issues/112)
-    nlist = math.ceil(4 * math.sqrt(embeddings_size))
+    nlist = math.ceil(4 * math.sqrt(embeddings_size)) if nlist is None else nlist
     # distance metric (equal to cosine similarity if embeddings are normalized)
     metric = faiss.METRIC_INNER_PRODUCT
     # create IVF index (with ids)
