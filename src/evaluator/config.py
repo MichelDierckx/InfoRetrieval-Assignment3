@@ -47,8 +47,9 @@ class Config:
         # Parse the arguments
         self._namespace = vars(self._parser.parse_args(args_str))
         self._validate_file_path("ranking", [".csv", ".tsv"])
-        self._validate_file_path("reference", [".csv", ".tsv"])
+        self._validate_file_path("gt", [".csv", ".tsv"])
         self._validate_directory_path("work_dir")
+        self._validate_positive_ints("k", True)
         self._log_parameters()
 
     def _define_arguments(self) -> None:
@@ -68,14 +69,14 @@ class Config:
             metavar="<path>",
         )
         self._parser.add_argument(
-            "--reference",
+            "--gt",
             required=True,
             help=(
                 "File containing the reference ranking used for evaluation. Supports .csv and .tsv"
             ),
             type=str,
             action='store',
-            dest="reference",
+            dest="gt",
             metavar="<path>",
         )
 
@@ -96,6 +97,15 @@ class Config:
             type=str,
             action='store',
             dest="eval_filename",
+        )
+
+        self._parser.add_argument(
+            "--k",
+            required=True,
+            help="The k's used to compute 'Mean Precision at k' and 'Mean Recall at k'.",
+            type=int,
+            action='append',
+            dest="k",
         )
 
     def _validate_directory_path(self, param: str) -> None:
@@ -133,6 +143,14 @@ class Config:
                 raise ValueError(
                     f"--{param}: Path '{path}' does not end with one of the following extensions: {valid_extensions}"
                 )
+
+    def _validate_positive_ints(self, param: str, strict: bool = False) -> None:
+        values = self.get(param)
+        for value in values:
+            int_value = int(value)
+            if (strict and int_value <= 0) or (not strict and int_value < 0):
+                comparison = "greater than 0" if strict else "0 or greater"
+                raise ValueError(f"--{param}: {value} is not a positive integer ({comparison}).")
 
     def _log_parameters(self) -> None:
         """Log all chosen parameters."""
