@@ -49,6 +49,8 @@ class Config:
         self._validate_file_path("index", [".index"])
         self._validate_file_path("queries", [".csv", ".tsv"])
         self._validate_directory_path("work_dir")
+        self._validate_positive_int("k", True)
+        self._validate_positive_int("n_probes", True)
         self._log_parameters()
 
     def _define_arguments(self) -> None:
@@ -72,7 +74,7 @@ class Config:
             "--index",
             required=True,
             help=(
-                "File containing a FAISS index."
+                "File containing a FAISS index (supports faiss index types 'IndexIDMap(IndexFlatIP)', IndexIVFFlat)"
             ),
             type=str,
             action='store',
@@ -97,6 +99,25 @@ class Config:
             type=str,
             action='store',
             dest="rankings",
+        )
+
+        self._parser.add_argument(
+            "--k",
+            required=True,
+            type=int,
+            default=10,
+            help="The number of neighbours to retrieve per query.",
+            action='store',
+            dest="k",
+        )
+
+        self._parser.add_argument(
+            "--n_probes",
+            type=int,
+            default=1,
+            help="Only affects searches with indexes of type 'IndexIVFFlat'. The number of clusters to consider during search.",
+            action='store',
+            dest="n_probes",
         )
 
     def _validate_directory_path(self, param: str, required_extensions: Optional[list] = None) -> None:
@@ -148,6 +169,13 @@ class Config:
                 raise ValueError(
                     f"--{param}: Path '{path}' does not end with one of the following extensions: {valid_extensions}"
                 )
+
+    def _validate_positive_int(self, param: str, strict: bool = False) -> None:
+        value = self.get(param)
+        int_value = int(value)
+        if (strict and int_value <= 0) or (not strict and int_value < 0):
+            comparison = "greater than 0" if strict else "0 or greater"
+            raise ValueError(f"--{param}: {value} is not a positive integer ({comparison}).")
 
     def _log_parameters(self) -> None:
         """Log all chosen parameters."""

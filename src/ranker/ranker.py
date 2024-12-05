@@ -20,10 +20,10 @@ BATCH_SIZE = 1_000
 
 def run(config: Config):
     _rank_documents(query_file=config.queries, index_file=config.index, rankings_filename=config.rankings,
-                    work_dir=config.work_dir)
+                    work_dir=config.work_dir, k=config.k, n_probes=config.n_probes)
 
 
-def _rank_documents(query_file: str, index_file: str, rankings_filename: str, work_dir: str):
+def _rank_documents(query_file: str, index_file: str, rankings_filename: str, work_dir: str, k: int, n_probes: int):
     # Load a pretrained Sentence Transformer model
     model_name = "all-MiniLM-L6-v2"
     model = SentenceTransformer(model_name)
@@ -32,7 +32,7 @@ def _rank_documents(query_file: str, index_file: str, rankings_filename: str, wo
 
     # Load the index from disk
     index: faiss.Index = faiss.read_index(index_file)
-    index_type = type(index).__name__
+    index_type = get_index_type(index)
     logger.info(f"Loaded index of type '{index_type}' from '{index_file}'.")
 
     # Create empty output file to save computed document rankings for given queries
@@ -57,7 +57,7 @@ def _rank_documents(query_file: str, index_file: str, rankings_filename: str, wo
         embeddings = model.encode(queries, batch_size=32, show_progress_bar=False, convert_to_numpy=True,
                                   precision="float32", normalize_embeddings=True)
         # search the index with the generated embeddings
-        _, nn_matrix = _query(index, embeddings)
+        _, nn_matrix = _query(index=index, query_embeddings=embeddings, k=k, n_probes=n_probes)
 
         # combine query results with query numbers
         ids = batch["Query number"].to_numpy()
@@ -76,29 +76,39 @@ def _rank_documents(query_file: str, index_file: str, rankings_filename: str, wo
     logger.info(f"Query results have been written to '{rankings_filepath}'.")
 
 
-def _query(index: faiss.Index, query_embeddings: npt.NDArray[np.float32]) -> Tuple[
+def _query(index: faiss.Index, query_embeddings: npt.NDArray[np.float32], k: int, n_probes: int) -> Tuple[
     npt.NDArray[np.float32], npt.NDArray[np.int64]]:
     """
     Search the index using the embeddings for the queries.
-    :param index: a faiss index instance, either of type IndexIDMap or of type IndexIVFFlat
+    :param index: a faiss index instance, either of type IndexIDMap(IndexFlatIP) or of type IndexIVFFlat
     :param query_embeddings: the embeddings for the queries
+    :param k: the number of neighbours to retrieve for each query
+    :param n_probes: the number of clusters to be probed during search (only affects indexes of type IndexIVFFlat)
     :return: a tuple (D, I), where D will contain the distances and I will contain the indices of the neighbours
     """
-    # the number of neighbors to retrieve for each query
-    nr_neighbours = 10
     # get the index type
-    index_type = type(index).__name__
+    index_type = get_index_type(index)
     # search using the appropriate index type
-
     match index_type:
-        case "IndexIDMap":
+        case "IndexFlatIP":
             # brute force search
-            D, I = index.search(query_embeddings, nr_neighbours)
+            D, I = index.search(query_embeddings, k)
         case "IndexIVFFlat":
+            # https://github.com/facebookresearch/faiss/wiki/FAQ#how-can-i-set-nprobe-on-an-opaque-index
+            index = faiss.extract_index_ivf(index)
             # number of clusters to visit
-            index.nprobe = 10
+            index.nprobe = n_probes
             # search clusters
-            D, I = index.search(query_embeddings, nr_neighbours)
+            D, I = index.search(query_embeddings, k)
         case _:
             raise ValueError(f"Unsupported index type '{index_type}'")
     return D, I
+
+
+def get_index_type(index: faiss.Index) -> str:
+    # sometimes an index is wrapped inside an IndexIDMap to allow for custom index id's
+    if isinstance(index, (faiss.IndexIDMap, faiss.IndexIDMap2)):
+        return "IndexFlatIP"
+    else:
+        # not wrapped inside IndexIDMap
+        return type(index).__name__
