@@ -10,13 +10,16 @@ from tqdm import tqdm
 
 from src.document_embedder.config import Config
 from src.utils.embeddings_store import EmbeddingsStore
-from src.utils.logger_setup import get_logger
+from src.utils.logger_setup import get_logger, configure_file_logger
 from src.utils.utils import elapsed_time_to_string
 
 logger = get_logger(__name__)
 
 
 def run(config: Config):
+    # setup logfile
+    logfile = os.path.join(config.work_dir, f"clustering_tuner_{config.embeddings_dir}.log")
+    configure_file_logger(logger, logfile)
     # create an index for the provided embeddings
     _find_optimal_nr_clusters(embeddings_dir=config.embeddings, work_dir=config.work_dir, step_size=config.step_size)
 
