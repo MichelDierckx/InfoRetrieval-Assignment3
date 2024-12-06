@@ -18,7 +18,8 @@ logger = get_logger(__name__)
 
 def run(config: Config):
     # setup logfile
-    logfile = os.path.join(config.work_dir, f"clustering_tuner_{config.embeddings}.log")
+    embeddings_name = os.path.basename(os.path.normpath(config.embeddings))
+    logfile = os.path.join(config.work_dir, f"clustering_tuner_{embeddings_name}.log")
     configure_file_logger(logger, logfile)
     # create an index for the provided embeddings
     _find_optimal_nr_clusters(embeddings_dir=config.embeddings, work_dir=config.work_dir, step_size=config.step_size)
@@ -90,17 +91,19 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
 
     logger.info(f"Finished elbow analysis in {elapsed_time_to_string(time.time() - start_testing_time)}")
     # write results to disk
+    embeddings_name = os.path.basename(os.path.normpath(embeddings_dir))
     _write_results(nlists=nlists, sample_sizes=sample_sizes, wcss_results=wcss_results,
-                   average_search_time_results=average_search_time_results, embeddings_dir=embeddings_dir,
+                   average_search_time_results=average_search_time_results, embeddings_name=embeddings_name,
                    work_dir=work_dir)
     # plot results
     _plot_results(nlists=nlists, wcss_results=wcss_results, average_search_time_results=average_search_time_results,
-                  embeddings_dir=embeddings_dir, work_dir=work_dir)
+                  embeddings_name=embeddings_name, work_dir=work_dir)
 
 
-def _write_results(nlists: [], sample_sizes: [], wcss_results: [], average_search_time_results: [], embeddings_dir: str,
+def _write_results(nlists: [], sample_sizes: [], wcss_results: [], average_search_time_results: [],
+                   embeddings_name: str,
                    work_dir: str):
-    output_file = os.path.join(work_dir, f"{embeddings_dir}_elbow_method_results.csv")
+    output_file = os.path.join(work_dir, f"{embeddings_name}_elbow_method_results.csv")
     # Create a DataFrame
     df = pd.DataFrame({
         "nlist": nlists,
@@ -112,10 +115,10 @@ def _write_results(nlists: [], sample_sizes: [], wcss_results: [], average_searc
     logger.info(f"Saved elbow method statistics to '{output_file}'.")
 
 
-def _plot_results(nlists: [], wcss_results: [], average_search_time_results: [], embeddings_dir: str,
+def _plot_results(nlists: [], wcss_results: [], average_search_time_results: [], embeddings_name: str,
                   work_dir: str):
     # plot inertia
-    output_file_inertia = os.path.join(work_dir, f"{embeddings_dir}_inertia.png")
+    output_file_inertia = os.path.join(work_dir, f"{embeddings_name}_inertia.png")
     plt.plot(nlists, wcss_results, 'bx-')
     plt.xlabel('Number of Clusters (k)')
     plt.ylabel('Inertia')
@@ -126,7 +129,7 @@ def _plot_results(nlists: [], wcss_results: [], average_search_time_results: [],
     plt.close()
 
     # plot average search time
-    output_file_average_search_time = os.path.join(work_dir, f"{embeddings_dir}_search_time.png")
+    output_file_average_search_time = os.path.join(work_dir, f"{embeddings_name}_search_time.png")
     plt.plot(nlists, average_search_time_results, 'bx-')
     plt.xlabel('Number of Clusters (k)')
     plt.ylabel('Average search time (ms) per query')
