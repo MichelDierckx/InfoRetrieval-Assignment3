@@ -1,12 +1,15 @@
 import os
+import time
 
 import pandas as pd
+from natsort import natsorted
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 from src.document_embedder.config import Config
 from src.utils.embeddings_store import EmbeddingsStore
-from src.utils.logger_setup import get_logger
+from src.utils.logger_setup import get_logger, configure_file_logger
+from src.utils.utils import elapsed_time_to_string
 
 logger = get_logger(__name__)
 
@@ -15,6 +18,10 @@ BATCH_SIZE = 10_000
 
 
 def run(config: Config):
+    # setup logfile
+    logfile = os.path.join(config.work_dir, f"embedder_{config.embeddings_dir}.log")
+    configure_file_logger(logger, logfile)
+    # generate embeddings for documents
     _embed_documents(documents_dir=config.documents, work_dir=config.work_dir, embeddings_dir=config.embeddings_dir)
 
 
@@ -39,6 +46,8 @@ def _embed_documents(documents_dir: str, work_dir: str, embeddings_dir: str):
     # List documents
     text_files = [f for f in os.listdir(documents_dir) if
                   f.endswith('.txt') and os.path.isfile(os.path.join(documents_dir, f))]
+    text_files = natsorted(text_files)
+
     logger.info(f"Found {len(text_files)} documents.")
 
     # Create embeddings store instance to save embeddings
@@ -46,6 +55,9 @@ def _embed_documents(documents_dir: str, work_dir: str, embeddings_dir: str):
     embeddings_store = EmbeddingsStore(embeddings_store)
     # Clear out embeddings store
     embeddings_store.cleanup()
+
+    # start timer
+    start_time = time.time()
 
     # Read and encode documents in batch
     nr_batches = -(len(text_files) // -BATCH_SIZE)
@@ -67,6 +79,10 @@ def _embed_documents(documents_dir: str, work_dir: str, embeddings_dir: str):
         df.columns = df.columns.map(str)
         df["id"] = document_ids
         embeddings_store.write(df)
+
+    # log elapsed time to generate embeddings
+    logger.info(f"Generated embeddings for all documents in: {elapsed_time_to_string(time.time() - start_time)}")
+
     logger.info(f"Created vector store at '{embeddings_store.path}'.")
     # remove old backup versions to reduce size on disk (lance feature)
     embeddings_store.cleanup()

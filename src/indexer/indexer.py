@@ -8,7 +8,8 @@ from tqdm import tqdm
 
 from src.document_embedder.config import Config
 from src.utils.embeddings_store import EmbeddingsStore
-from src.utils.logger_setup import get_logger
+from src.utils.logger_setup import get_logger, configure_file_logger
+from src.utils.utils import elapsed_time_to_string
 
 logger = get_logger(__name__)
 
@@ -17,6 +18,10 @@ BATCH_SIZE = 10_000
 
 
 def run(config: Config):
+    # setup logfile
+    logfile = os.path.join(config.work_dir, f"indexer_{config.index_filename}.log")
+    configure_file_logger(logger, logfile)
+    # create an index for the provided embeddings
     _index(embeddings_dir=config.embeddings, work_dir=config.work_dir, index_filename=config.index_filename,
            index_type=config.index_type, nlist=config.nlist)
 
@@ -30,6 +35,9 @@ def _index(embeddings_dir: str, work_dir: str, index_filename: str, index_type: 
     nr_embeddings = embeddings_store.nr_embeddings()
     logger.info(f"Found {nr_embeddings} embeddings at '{embeddings_dir}'.")
 
+    # start timer
+    create_index_time_start = time.time()
+
     match index_type:
         case "Exhaustive":
             index = _create_bruteforce_index(embeddings_store=embeddings_store)
@@ -42,6 +50,9 @@ def _index(embeddings_dir: str, work_dir: str, index_filename: str, index_type: 
                 index = _create_ivf_index(embeddings_store=embeddings_store, nlist=nlist)
             else:
                 raise ValueError(f'Cannot create index for {nr_embeddings} embeddings')
+
+    # log elapsed time to create index
+    logger.info(f"Created index in: {elapsed_time_to_string(time.time() - create_index_time_start)}")
 
     # write index to file
     index_filename = index_filename + '.index'
