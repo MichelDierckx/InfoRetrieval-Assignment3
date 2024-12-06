@@ -50,7 +50,7 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
 
     nlists = []
     sample_sizes = []
-    wcss_results = []
+    average_distances_results = []
     average_search_time_results = []
 
     start_testing_time = time.time()
@@ -80,28 +80,29 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
         search_time = time.time() - start_time
 
         # https://www.geeksforgeeks.org/elbow-method-for-optimal-value-of-k-in-kmeans/
-        wcss = np.sum(D ** 2)
+        average_distances_to_centroid = np.mean(D)
         # average search time in ms
         average_search_time = int((search_time / sample_size) * 1000)
 
         # save results
         nlists.append(nlist)
         sample_sizes.append(sample_size)
-        wcss_results.append(wcss)
+        average_distances_results.append(average_distances_to_centroid)
         average_search_time_results.append(average_search_time)
 
     logger.info(f"Finished elbow analysis in {elapsed_time_to_string(time.time() - start_testing_time)}")
     # write results to disk
     embeddings_name = os.path.basename(os.path.normpath(embeddings_dir))
-    _write_results(nlists=nlists, sample_sizes=sample_sizes, wcss_results=wcss_results,
+    _write_results(nlists=nlists, sample_sizes=sample_sizes, average_distances=average_distances_results,
                    average_search_time_results=average_search_time_results, embeddings_name=embeddings_name,
                    work_dir=work_dir)
     # plot results
-    _plot_results(nlists=nlists, wcss_results=wcss_results, average_search_time_results=average_search_time_results,
+    _plot_results(nlists=nlists, average_distances=average_distances_results,
+                  average_search_time_results=average_search_time_results,
                   embeddings_name=embeddings_name, work_dir=work_dir)
 
 
-def _write_results(nlists: [], sample_sizes: [], wcss_results: [], average_search_time_results: [],
+def _write_results(nlists: [], sample_sizes: [], average_distances: [], average_search_time_results: [],
                    embeddings_name: str,
                    work_dir: str):
     output_file = os.path.join(work_dir, f"{embeddings_name}_elbow_method_results.csv")
@@ -109,24 +110,24 @@ def _write_results(nlists: [], sample_sizes: [], wcss_results: [], average_searc
     df = pd.DataFrame({
         "nlist": nlists,
         "sample_size": sample_sizes,
-        "wcss": wcss_results,
+        "average_centroid_distances": average_distances,
         "average_search_time": average_search_time_results
     })
     df.to_csv(output_file, index=False, mode="w")
     logger.info(f"Saved elbow method statistics to '{output_file}'.")
 
 
-def _plot_results(nlists: [], wcss_results: [], average_search_time_results: [], embeddings_name: str,
+def _plot_results(nlists: [], average_distances: [], average_search_time_results: [], embeddings_name: str,
                   work_dir: str):
-    # plot inertia
-    output_file_inertia = os.path.join(work_dir, f"{embeddings_name}_inertia.png")
-    plt.plot(nlists, wcss_results, 'bx-')
+    # plot distortion
+    output_file_distortion = os.path.join(work_dir, f"{embeddings_name}_distortion.png")
+    plt.plot(nlists, average_distances, 'bx-')
     plt.xlabel('Number of Clusters (k)')
-    plt.ylabel('Inertia')
-    plt.title('The Elbow Method using Inertia')
+    plt.ylabel('Distortion')
+    plt.title('The Elbow Method using Distortion')
     plt.grid()
-    plt.savefig(output_file_inertia)
-    logger.info(f"Saved inertia graph  to '{output_file_inertia}'.")
+    plt.savefig(output_file_distortion)
+    logger.info(f"Saved distortion graph  to '{output_file_distortion}'.")
     plt.close()
 
     # plot average search time
