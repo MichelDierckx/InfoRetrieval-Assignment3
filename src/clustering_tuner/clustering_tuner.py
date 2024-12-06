@@ -33,7 +33,7 @@ def _find_optimal_nr_clusters(embeddings_dir: str, work_dir: str, step_size: int
                   step_size=step_size)
 
 
-def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_dir: str, step_size: int) -> faiss.Index:
+def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_dir: str, step_size: int):
     # retrieve embeddings size
     embeddings_size = embeddings_store.get_embeddings_size()
 
