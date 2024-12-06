@@ -77,7 +77,8 @@ def _create_ivf_index(embeddings_store: EmbeddingsStore, nlist: Optional[str]) -
     # retrieve embeddings size
     embeddings_size = embeddings_store.get_embeddings_size()
     # number of clusters (https://arxiv.org/pdf/2401.08281, https://github.com/facebookresearch/faiss/issues/112)
-    nlist = math.ceil(4 * math.sqrt(embeddings_size)) if nlist is None else nlist
+    nr_embeddings = embeddings_store.nr_embeddings()
+    nlist = math.ceil(4 * math.sqrt(nr_embeddings)) if nlist is None else nlist
     # distance metric (equal to cosine similarity if embeddings are normalized)
     metric = faiss.METRIC_INNER_PRODUCT
     # create IVF index (with ids)
