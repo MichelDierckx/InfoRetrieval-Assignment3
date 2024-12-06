@@ -22,24 +22,26 @@ def run(config: Config):
     logfile = os.path.join(config.work_dir, f"clustering_tuner_{config.index_filename}.log")
     configure_file_logger(logger, logfile)
     # create an index for the provided embeddings
-    _find_optimal_nr_clusters(embeddings_dir=config.embeddings, work_dir=config.work_dir)
+    _find_optimal_nr_clusters(embeddings_dir=config.embeddings, work_dir=config.work_dir, step_size=config.step_size)
 
 
-def _find_optimal_nr_clusters(embeddings_dir: str, work_dir: str):
+def _find_optimal_nr_clusters(embeddings_dir: str, work_dir: str, step_size: int):
     # create embeddings store instance to access document embeddings
     embeddings_store = EmbeddingsStore(embeddings_dir)
     embeddings_store.created = True
-    _elbow_method(embeddings_store=embeddings_store, embeddings_dir=embeddings_dir, work_dir=work_dir)
+    _elbow_method(embeddings_store=embeddings_store, embeddings_dir=embeddings_dir, work_dir=work_dir,
+                  step_size=step_size)
 
 
-def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_dir: str) -> faiss.Index:
+def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_dir: str, step_size: int) -> faiss.Index:
     # retrieve embeddings size
     embeddings_size = embeddings_store.get_embeddings_size()
 
     # range of clusters to explore (https://arxiv.org/pdf/2401.08281, https://github.com/facebookresearch/faiss/issues/112, https://github.com/facebookresearch/faiss/wiki/FAQ#can-i-ignore-warning-clustering-xxx-points-to-yyy-centroids)
     nr_embeddings = embeddings_store.nr_embeddings()
     # faiss recommends 4*sqrt(n) number of clusters for less than 1M vectors, so we explore from 1*sqrt(n) to 7*sqrt(n)
-    nlist_min = math.ceil(1 * math.sqrt(embeddings_size))
+    # nlist_min = math.ceil(1 * math.sqrt(embeddings_size))
+    nlist_min = 1
     # at least 39*nr_clusters training points required, we take 50 as minimum to be safe
     nlist_max = min(math.ceil(7 * math.sqrt(embeddings_size)), len(nr_embeddings) // 50)
 
@@ -52,7 +54,7 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
     average_search_time_results = []
 
     # try different number of clusters (in steps of 100)
-    for nlist in range(nlist_min, nlist_max + 1, 100):
+    for nlist in range(nlist_min, nlist_max + 1, step_size):
         # minimum number of samples is 39
         sample_size = min(50 * nlist, nr_embeddings)
         # retrieve samples from embeddings storage

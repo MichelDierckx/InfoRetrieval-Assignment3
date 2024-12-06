@@ -48,6 +48,7 @@ class Config:
         self._namespace = vars(self._parser.parse_args(args_str))
         self._validate_directory_path("embeddings")
         self._validate_directory_path("work_dir")
+        self._validate_positive_int("step_size", True)
         self._log_parameters()
 
     def _define_arguments(self) -> None:
@@ -73,6 +74,17 @@ class Config:
             action='store',
             dest="work_dir",
             metavar="<path>",
+        )
+
+        self._parser.add_argument(
+            "--step_size",
+            required=True,
+            help="Specifies the increment for the number of clusters tested during the elbow method analysis. "
+                 "For example, a step size of 5 will test clusters in increments of 5 (e.g., 5, 10, 15, ...).",
+            type=int,
+            action='store',
+            dest="step_size",
+            metavar="<int>",
         )
 
     def _validate_directory_path(self, param: str, required_extensions: Optional[list] = None) -> None:
