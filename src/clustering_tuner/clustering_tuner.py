@@ -43,7 +43,7 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
     # nlist_min = math.ceil(1 * math.sqrt(embeddings_size))
     nlist_min = 1
     # at least 39*nr_clusters training points required, we take 50 as minimum to be safe
-    nlist_max = min(math.ceil(7 * math.sqrt(embeddings_size)), len(nr_embeddings) // 50)
+    nlist_max = min(math.ceil(7 * math.sqrt(embeddings_size)), nr_embeddings // 50)
 
     # distance metric (equal to cosine similarity if embeddings are normalized)
     metric = faiss.METRIC_INNER_PRODUCT
