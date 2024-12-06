@@ -40,6 +40,12 @@ To evaluate generated rankings using a reference ranking use:
 python3 -m src.scripts.run_evaluator -c /path/to/config.ini
 ```
 
+To find an optimal number of clusters using elbow method:
+
+```bash
+python3 -m src.scripts.run_clustering_tuner -c /path/to/config.ini
+```
+
 #### Program arguments
 
 You can provide program arguments in two ways:

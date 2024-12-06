@@ -6,21 +6,17 @@ import faiss
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 from src.document_embedder.config import Config
 from src.utils.embeddings_store import EmbeddingsStore
-from src.utils.logger_setup import get_logger, configure_file_logger
+from src.utils.logger_setup import get_logger
+from src.utils.utils import elapsed_time_to_string
 
 logger = get_logger(__name__)
 
-# the number of embeddings added to the index per batch
-BATCH_SIZE = 10_000
-
 
 def run(config: Config):
-    # setup logfile
-    logfile = os.path.join(config.work_dir, f"clustering_tuner_{config.index_filename}.log")
-    configure_file_logger(logger, logfile)
     # create an index for the provided embeddings
     _find_optimal_nr_clusters(embeddings_dir=config.embeddings, work_dir=config.work_dir, step_size=config.step_size)
 
@@ -53,8 +49,13 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
     wcss_results = []
     average_search_time_results = []
 
+    start_testing_time = time.time()
+    logger.info(
+        f"Initiating elbow method analysis: testing cluster counts from {nlist_min} to {nlist_max} with a step size of {step_size}.")
+
     # try different number of clusters (in steps of 100)
-    for nlist in range(nlist_min, nlist_max + 1, step_size):
+    for nlist in tqdm(range(nlist_min, nlist_max + 1, step_size), desc="Testing different numbers of clusters",
+                      unit="tests"):
         # minimum number of samples is 39
         sample_size = min(50 * nlist, nr_embeddings)
         # retrieve samples from embeddings storage
@@ -84,6 +85,7 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
         wcss_results.append(wcss)
         average_search_time_results.append(average_search_time)
 
+    logger.info(f"Finished elbow analysis in {elapsed_time_to_string(time.time() - start_testing_time)}")
     # write results to disk
     _write_results(nlists=nlists, sample_sizes=sample_sizes, wcss_results=wcss_results,
                    average_search_time_results=average_search_time_results, embeddings_dir=embeddings_dir,
@@ -104,6 +106,7 @@ def _write_results(nlists: [], sample_sizes: [], wcss_results: [], average_searc
         "average_search_time": average_search_time_results
     })
     df.to_csv(output_file, index=False)
+    logger.info(f"Saved elbow method statistics to '{output_file}'.")
 
 
 def _plot_results(nlists: [], wcss_results: [], average_search_time_results: [], embeddings_dir: str,
@@ -116,6 +119,7 @@ def _plot_results(nlists: [], wcss_results: [], average_search_time_results: [],
     plt.title('The Elbow Method using Inertia')
     plt.grid()
     plt.savefig(output_file_inertia)
+    logger.info(f"Saved inertia graph  to '{output_file_inertia}'.")
     plt.close()
 
     # plot average search time
@@ -126,4 +130,5 @@ def _plot_results(nlists: [], wcss_results: [], average_search_time_results: [],
     plt.title('Search Time vs Number of Clusters')
     plt.grid()
     plt.savefig(output_file_average_search_time)
+    logger.info(f"Saved search time graph  to '{output_file_average_search_time}'.")
     plt.close()
