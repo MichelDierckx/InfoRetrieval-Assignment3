@@ -41,7 +41,7 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
     nr_embeddings = embeddings_store.nr_embeddings()
     # faiss recommends 4*sqrt(n) number of clusters for less than 1M vectors, so we explore from 1*sqrt(n) to 7*sqrt(n)
     # nlist_min = math.ceil(1 * math.sqrt(nr_embeddings)
-    nlist_min = 1
+    nlist_min = 100
     # at least 39*nr_clusters training points required, we take 50 as minimum to be safe
     nlist_max = min(math.ceil(7 * math.sqrt(nr_embeddings)), nr_embeddings // 50)
 
@@ -57,13 +57,14 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
     logger.info(
         f"Initiating elbow method analysis: testing cluster counts from {nlist_min} to {nlist_max} with a step size of {step_size}.")
 
+    # sample_size should at least be 39*nr_clusters
+    sample_size = min(50 * nlist_max, nr_embeddings)
+    # retrieve samples from embeddings storage
+    samples = embeddings_store.sample(sample_size)
+
     # try different number of clusters (in steps of 100)
     for nlist in tqdm(range(nlist_min, nlist_max + 1, step_size), desc="Testing different numbers of clusters",
                       unit="tests"):
-        # minimum number of samples is 39
-        sample_size = min(50 * nlist, nr_embeddings)
-        # retrieve samples from embeddings storage
-        samples = embeddings_store.sample(sample_size)
         index = faiss.IndexIVFFlat(
             faiss.IndexFlatIP(embeddings_size), embeddings_size, nlist, metric
         )
