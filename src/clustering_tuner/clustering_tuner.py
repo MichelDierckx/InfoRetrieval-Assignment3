@@ -40,10 +40,10 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
     # range of clusters to explore (https://arxiv.org/pdf/2401.08281, https://github.com/facebookresearch/faiss/issues/112, https://github.com/facebookresearch/faiss/wiki/FAQ#can-i-ignore-warning-clustering-xxx-points-to-yyy-centroids)
     nr_embeddings = embeddings_store.nr_embeddings()
     # faiss recommends 4*sqrt(n) number of clusters for less than 1M vectors, so we explore from 1*sqrt(n) to 7*sqrt(n)
-    # nlist_min = math.ceil(1 * math.sqrt(embeddings_size))
+    # nlist_min = math.ceil(1 * math.sqrt(nr_embeddings)
     nlist_min = 1
     # at least 39*nr_clusters training points required, we take 50 as minimum to be safe
-    nlist_max = min(math.ceil(7 * math.sqrt(embeddings_size)), nr_embeddings // 50)
+    nlist_max = min(math.ceil(7 * math.sqrt(nr_embeddings)), nr_embeddings // 50)
 
     # distance metric (equal to cosine similarity if embeddings are normalized)
     metric = faiss.METRIC_INNER_PRODUCT
@@ -111,7 +111,7 @@ def _write_results(nlists: [], sample_sizes: [], wcss_results: [], average_searc
         "wcss": wcss_results,
         "average_search_time": average_search_time_results
     })
-    df.to_csv(output_file, index=False)
+    df.to_csv(output_file, index=False, mode="w")
     logger.info(f"Saved elbow method statistics to '{output_file}'.")
 
 
