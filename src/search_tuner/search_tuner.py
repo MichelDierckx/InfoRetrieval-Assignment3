@@ -3,6 +3,7 @@ import time
 from typing import Tuple, List
 
 import faiss
+import kneed
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -11,12 +12,18 @@ from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 from src.search_tuner.config import Config
-from src.utils.logger_setup import get_logger
+from src.utils.logger_setup import get_logger, configure_file_logger
 
 logger = get_logger(__name__)
 
 
 def run(config: Config):
+    # setup logfile
+    index_name = os.path.splitext(os.path.basename(os.path.normpath(config.index)))[0]
+    logfile = os.path.join(config.work_dir, f"search_tuner_{index_name}.log")
+    configure_file_logger(logger, logfile)
+
+    # find optimal number for nprobes
     _find_optimal_nr_probes(query_file=config.queries, index_file=config.index,
                             work_dir=config.work_dir, gt=config.gt, min_nprobes=config.min_nprobes,
                             max_nprobes=config.max_nprobes, step_size=config.step_size)
@@ -76,12 +83,19 @@ def _find_optimal_nr_probes(query_file: str, index_file: str, work_dir: str, gt:
         mean_precision_values.append(mean_precision)
         mean_recall_values.append(mean_recall)
 
+    knee_point_precision = _find_knee_point(x=nprobe_values, y=mean_precision_values)
+    knee_point_recall = _find_knee_point(x=nprobe_values, y=mean_recall_values)
+
+    logger.info(f"Knee point precision (indicator for optimal nr of clusters probed) = {knee_point_precision}.")
+    logger.info(f"Knee point recall (indicator for optimal nr of clusters probed) = {knee_point_recall}.")
+
     _write_results(nprobe_values=nprobe_values, average_search_times=average_search_times,
                    mean_precision_values=mean_precision_values, mean_recall_values=mean_recall_values,
                    index_name=index_name, work_dir=work_dir)
     _plot_results(nprobe_values=nprobe_values, average_search_time_values=average_search_times,
                   mean_precision_values=mean_precision_values, mean_recall_values=mean_recall_values,
-                  index_name=index_name, work_dir=work_dir)
+                  index_name=index_name, work_dir=work_dir, knee_point_precision=knee_point_precision,
+                  knee_point_recall=knee_point_recall)
 
 
 def _query(index: faiss.Index, query_embeddings: npt.NDArray[np.float32], k: int, n_probes: int) -> Tuple[
@@ -157,13 +171,12 @@ def _write_results(nprobe_values: List, average_search_times: List, mean_precisi
 
 
 def _plot_results(nprobe_values: List, average_search_time_values: List, mean_precision_values: List,
-                  mean_recall_values: List,
+                  mean_recall_values: List, knee_point_precision: int, knee_point_recall: int,
                   index_name: str,
                   work_dir: str):
     # set x-axis ticks
-    nprobe_min = min(nprobe_values)
     nprobe_max = max(nprobe_values)
-    ticks = range(nprobe_min, nprobe_max + 100, 100)
+    ticks = range(0, nprobe_max + 100, 100)
 
     # plot mean_precision_at_10
     output_file_precision = os.path.join(work_dir, f"{index_name}_precision.png")
@@ -173,6 +186,7 @@ def _plot_results(nprobe_values: List, average_search_time_values: List, mean_pr
     plt.title('Precision vs. Number of probes (nprobes)')
     plt.xticks(ticks)
     plt.grid()
+    plt.vlines(knee_point_precision, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
     plt.savefig(output_file_precision)
     logger.info(f"Saved precision graph  to '{output_file_precision}'.")
     plt.close()
@@ -197,6 +211,25 @@ def _plot_results(nprobe_values: List, average_search_time_values: List, mean_pr
     plt.title('Mean Recall at 10 vs. Number of Probes (nprobes)')
     plt.xticks(ticks)
     plt.grid()
+    plt.vlines(knee_point_recall, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
     plt.savefig(output_file_recall)
     logger.info(f"Saved mean recall graph to '{output_file_recall}'.")
     plt.close()
+
+
+def _find_knee_point(x: List, y: List):
+    """
+    Determine the elbow point using kneedle algorithm (https://www1.icsi.berkeley.edu/~barath/papers/kneedle-simplex11.pdf)
+    :param x: x_values
+    :param y: y_values
+    :return: knee point
+    """
+    kn = kneed.KneeLocator(
+        x,
+        y,
+        curve='concave',
+        direction='increasing',
+        interp_method='polynomial'
+    )
+    knee_point_x = kn.knee
+    return knee_point_x
