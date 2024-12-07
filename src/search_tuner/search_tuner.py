@@ -18,10 +18,12 @@ logger = get_logger(__name__)
 
 def run(config: Config):
     _find_optimal_nr_probes(query_file=config.queries, index_file=config.index,
-                            work_dir=config.work_dir, gt=config.gt, min_nprobes=config.min_nprobes, max_nprobes=config.max_nprobes, step_size=config.step_size)
+                            work_dir=config.work_dir, gt=config.gt, min_nprobes=config.min_nprobes,
+                            max_nprobes=config.max_nprobes, step_size=config.step_size)
 
 
-def _find_optimal_nr_probes(query_file: str, index_file: str, work_dir: str, gt: str, min_nprobes: int, max_nprobes: int, step_size: int):
+def _find_optimal_nr_probes(query_file: str, index_file: str, work_dir: str, gt: str, min_nprobes: int,
+                            max_nprobes: int, step_size: int):
     # Load a pretrained Sentence Transformer model
     model_name = "all-MiniLM-L6-v2"
     model = SentenceTransformer(model_name)
@@ -33,7 +35,10 @@ def _find_optimal_nr_probes(query_file: str, index_file: str, work_dir: str, gt:
     index: faiss.Index = faiss.read_index(index_file)
     logger.info(f"Loaded index from '{index_file}'.")
 
-    queries_df = pd.read_csv(query_file)
+    # Determine the separator based on the file extension
+    file_extension = os.path.splitext(query_file)[1].lower()
+    sep = '\t' if file_extension == '.tsv' else ','
+    queries_df = pd.read_csv(query_file, sep=sep, nrows=1000)
     nr_queries = queries_df.shape[0]
     # generate embeddings for queries
     queries = queries_df["Query"].astype(str).tolist()
@@ -52,8 +57,9 @@ def _find_optimal_nr_probes(query_file: str, index_file: str, work_dir: str, gt:
     logger.info(
         f"Initiating elbow method analysis: testing values for number of clusters probed from {min_nprobes} to {max_nprobes} with a step size of {step_size}.")
 
-    for n_probes in tqdm(range(min_nprobes, max_nprobes + 1, step_size), desc="Testing different values for number of clusters probed.",
-                      unit="test"):
+    for n_probes in tqdm(range(min_nprobes, max_nprobes + 1, step_size),
+                         desc="Testing different values for number of clusters probed.",
+                         unit="test"):
         # search the index with the generated embeddings
         start_time = time.perf_counter()
         _, nn_matrix = _query(index=index, query_embeddings=embeddings, k=10, n_probes=n_probes)

@@ -44,8 +44,11 @@ def _rank_documents(query_file: str, index_file: str, rankings_filename: str, wo
     query_count = 0
     query_time_start = time.time()
 
+    # Determine the separator based on the file extension
+    file_extension = os.path.splitext(query_file)[1].lower()
+    sep = '\t' if file_extension == '.tsv' else ','
     # (wrap generator in a tqdm object for status updates)
-    batches = tqdm(pd.read_csv(query_file, chunksize=BATCH_SIZE), desc="Processing queries",
+    batches = tqdm(pd.read_csv(query_file, chunksize=BATCH_SIZE, sep=sep, nrows=1000), desc="Processing queries",
                    unit=f"{BATCH_SIZE} queries", bar_format='{desc}')
 
     # Read queries in batch, convert to embeddings and query against the index
