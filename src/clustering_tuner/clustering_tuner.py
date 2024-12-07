@@ -66,7 +66,7 @@ def _elbow_method(embeddings_store: EmbeddingsStore, embeddings_dir: str, work_d
 
     # try different number of clusters (in steps of 100)
     for nlist in tqdm(range(nlist_min, nlist_max + 1, step_size), desc="Testing different numbers of clusters",
-                      unit="tests"):
+                      unit="test"):
         index = faiss.IndexIVFFlat(
             faiss.IndexFlatIP(embeddings_size), embeddings_size, nlist, metric
         )
