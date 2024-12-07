@@ -23,7 +23,7 @@ def run(config: Config):
     embeddings_name = os.path.basename(os.path.normpath(config.embeddings))
     logfile = os.path.join(config.work_dir, f"clustering_tuner_{embeddings_name}.log")
     configure_file_logger(logger, logfile)
-    # create an index for the provided embeddings
+    # find optimal nr of clusters
     _find_optimal_nr_clusters(embeddings_dir=config.embeddings, work_dir=config.work_dir, step_size=config.step_size)
 
 
