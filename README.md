@@ -46,6 +46,12 @@ To find an optimal number of clusters using elbow method:
 python3 -m src.scripts.run_clustering_tuner -c /path/to/config.ini
 ```
 
+To find an optimal number of clusters to probe during search time:
+
+```bash
+python3 -m src.scripts.run_search_tuner -c /path/to/config.ini
+```
+
 #### Program arguments
 
 You can provide program arguments in two ways:
