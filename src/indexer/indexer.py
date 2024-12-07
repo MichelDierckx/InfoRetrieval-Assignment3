@@ -4,6 +4,8 @@ import time
 from typing import Optional
 
 import faiss
+from matplotlib import pyplot as plt
+from sklearn.decomposition import PCA
 from tqdm import tqdm
 
 from src.document_embedder.config import Config
@@ -42,12 +44,14 @@ def _index(embeddings_dir: str, work_dir: str, index_filename: str, index_type: 
         case "Exhaustive":
             index = _create_bruteforce_index(embeddings_store=embeddings_store)
         case "IVF":
-            index = _create_ivf_index(embeddings_store=embeddings_store, nlist=nlist)
+            index = _create_ivf_index(embeddings_store=embeddings_store, nlist=nlist, work_dir=work_dir,
+                                      index_filename=index_filename)
         case _:
             if nr_embeddings <= 10 ** 4:
                 index = _create_bruteforce_index(embeddings_store=embeddings_store)
             elif nr_embeddings <= 10 ** 6:
-                index = _create_ivf_index(embeddings_store=embeddings_store, nlist=nlist)
+                index = _create_ivf_index(embeddings_store=embeddings_store, nlist=nlist, work_dir=work_dir,
+                                          index_filename=index_filename)
             else:
                 raise ValueError(f'Cannot create index for {nr_embeddings} embeddings')
 
@@ -73,7 +77,8 @@ def _create_bruteforce_index(embeddings_store: EmbeddingsStore) -> faiss.Index:
     return index
 
 
-def _create_ivf_index(embeddings_store: EmbeddingsStore, nlist: Optional[str]) -> faiss.Index:
+def _create_ivf_index(embeddings_store: EmbeddingsStore, nlist: Optional[str], work_dir: str,
+                      index_filename: str) -> faiss.Index:
     # retrieve embeddings size
     embeddings_size = embeddings_store.get_embeddings_size()
     # number of clusters (https://arxiv.org/pdf/2401.08281, https://github.com/facebookresearch/faiss/issues/112)
@@ -103,4 +108,24 @@ def _create_ivf_index(embeddings_store: EmbeddingsStore, nlist: Optional[str]) -
     for ids, embeddings in tqdm(embeddings_store.get_batches(BATCH_SIZE), desc="Adding embeddings to index",
                                 unit=f"{BATCH_SIZE} embeddings", total=nr_batches):
         index.add_with_ids(embeddings, ids)
+    # create a scatter plot of the centroids
+    _plot_ivf_cluster_centroids(index=index, work_dir=work_dir, index_filename=index_filename)
     return index
+
+
+def _plot_ivf_cluster_centroids(index: faiss.Index, work_dir: str, index_filename: str):
+    # retrieve centroids
+    centroids = index.quantizer.reconstruct_n(0, index.nlist)
+    # reduce dimensionality to 2D using PCA
+    pca = PCA(n_components=2)
+    centroids_2d = pca.fit_transform(centroids)
+    # create a scatter plot
+    scatter_plot_path = os.path.join(work_dir, f"indexer_{index_filename}_centroids.png")
+    plt.scatter(centroids_2d[:, 0], centroids_2d[:, 1], c='blue', s=50, label='Centroids')
+    plt.title('Centroids Scatter Plot')
+    plt.xlabel('PCA Component 1')
+    plt.ylabel('PCA Component 2')
+    plt.legend()
+    plt.grid()
+    plt.savefig(scatter_plot_path)
+    logger.info(f"Saved centroids scatter plot to {scatter_plot_path}.")
