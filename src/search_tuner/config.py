@@ -13,7 +13,7 @@ class Config:
     def __init__(self):
         self._parser = configargparse.ArgParser(
             description="search tuner: find an appropriate value for the faiss nprobes variable for a given set of queries, a ground truth and an IVF index.",
-            default_config_files=["config_nprobes.ini"],
+            default_config_files=["config_search_tuner.ini"],
             args_for_setting_config_path=["-c", "--config"],
             formatter_class=configargparse.ArgumentDefaultsHelpFormatter,
         )
