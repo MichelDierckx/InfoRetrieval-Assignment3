@@ -10,7 +10,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
-from src.document_embedder.config import Config
+from src.clustering_tuner.config import Config
 from src.utils.embeddings_store import EmbeddingsStore
 from src.utils.logger_setup import get_logger, configure_file_logger
 from src.utils.utils import elapsed_time_to_string
