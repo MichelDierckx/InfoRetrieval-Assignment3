@@ -160,12 +160,18 @@ def _plot_results(nprobe_values: List, average_search_time_values: List, mean_pr
                   mean_recall_values: List,
                   index_name: str,
                   work_dir: str):
+    # set x-axis ticks
+    nprobe_min = min(nprobe_values)
+    nprobe_max = max(nprobe_values)
+    ticks = range(nprobe_min, nprobe_max + 100, 100)
+
     # plot mean_precision_at_10
     output_file_precision = os.path.join(work_dir, f"{index_name}_precision.png")
-    plt.plot(nprobe_values, mean_precision_values, 'bx-')
+    plt.plot(nprobe_values, mean_precision_values, 'b-')
     plt.xlabel('Number of probes (nprobes)')
     plt.ylabel('Mean Precision at 10')
     plt.title('Precision vs. Number of probes (nprobes)')
+    plt.xticks(ticks)
     plt.grid()
     plt.savefig(output_file_precision)
     logger.info(f"Saved precision graph  to '{output_file_precision}'.")
@@ -173,10 +179,11 @@ def _plot_results(nprobe_values: List, average_search_time_values: List, mean_pr
 
     # Plot average search times
     output_file_search_time = os.path.join(work_dir, f"{index_name}_average_search_time.png")
-    plt.plot(nprobe_values, average_search_time_values, 'bx-')
+    plt.plot(nprobe_values, average_search_time_values, 'b-')
     plt.xlabel('Number of Probes (nprobes)')
     plt.ylabel('Average Search Time (microseconds)')
     plt.title('Average Search Time vs. Number of Probes (nprobes)')
+    plt.xticks(ticks)
     plt.grid()
     plt.savefig(output_file_search_time)
     logger.info(f"Saved average search time graph to '{output_file_search_time}'.")
@@ -184,10 +191,11 @@ def _plot_results(nprobe_values: List, average_search_time_values: List, mean_pr
 
     # Plot mean recall
     output_file_recall = os.path.join(work_dir, f"{index_name}_mean_recall.png")
-    plt.plot(nprobe_values, mean_recall_values, 'bx-')
+    plt.plot(nprobe_values, mean_recall_values, 'b-')
     plt.xlabel('Number of Probes (nprobes)')
     plt.ylabel('Mean Recall at 10')
     plt.title('Mean Recall at 10 vs. Number of Probes (nprobes)')
+    plt.xticks(ticks)
     plt.grid()
     plt.savefig(output_file_recall)
     logger.info(f"Saved mean recall graph to '{output_file_recall}'.")
