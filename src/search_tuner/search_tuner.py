@@ -31,7 +31,7 @@ def _find_optimal_nr_probes(query_file: str, index_file: str, work_dir: str, gt:
         f"Loaded model '{model_name}' (max sequence length = {model.max_seq_length}, embedding dimension = {model.get_sentence_embedding_dimension()})")
 
     # Load the index from disk
-    index_name = os.path.basename(os.path.normpath(index_file))
+    index_name = os.path.splitext(os.path.basename(os.path.normpath(index_file)))[0]
     index: faiss.Index = faiss.read_index(index_file)
     logger.info(f"Loaded index from '{index_file}'.")
 
